@@ -72,3 +72,34 @@ class Cache:
             Union[int, None]: The retrieved integer.
         """
         return self.get(key, fn=int)
+
+def call_history(method: Callable) -> Callable:
+    """
+    Decorator to store the history of inputs and outputs for a function.
+
+    Args:
+        method (Callable): The function to decorate.
+
+    Returns:
+        Callable: The decorated function.
+    """
+    def wrapper(*args, **kwargs):
+        input_key = f"{method.__qualname__}:inputs"
+        output_key = f"{method.__qualname__}:outputs"
+
+        # Store input arguments
+        self = args[0]  # Extract the instance
+        self._redis.rpush(input_key, str(args[1:]))
+
+        # Execute the original method
+        output = method(*args, **kwargs)
+
+        # Store output
+        self._redis.rpush(output_key, str(output))
+
+        return output
+
+    return wrapper
+
+# Decorate Cache.store with call_history
+Cache.store = call_history(Cache.store)
